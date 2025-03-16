@@ -206,10 +206,9 @@ function Rectangle(width, height) {
   this.height = height;
 }
 
-Rectangle.prototype.getArea = function () {
+Rectangle.prototype.getArea = function getArea() {
   return this.width * this.height;
 };
-
 /**
  * Returns the JSON representation of specified object
  *
@@ -246,7 +245,7 @@ function Circle(radius) {
   this.radius = radius;
 }
 
-Circle.prototype.getArea = function () {
+Circle.prototype.getArea = function getArea() {
   return Math.PI * this.radius ** 2;
 };
 /**
@@ -381,142 +380,88 @@ function group(array, keySelector, valueSelector) {
 
 class CssSelector {
   constructor() {
-    this.elementValue = '';
-    this.idValue = '';
-    this.classValues = [];
-    this.attrValues = [];
-    this.pseudoClassValues = [];
-    this.pseudoElementValue = '';
-    this.combinator = '';
-    this.combinedSelectors = [];
-    this.order = [];
+    this.selector = '';
+    this.hasElement = false;
+    this.hasId = false;
+    this.hasPseudoElement = false;
   }
 
-  checkOrder(order) {
-    if (this.order.length && this.order[this.order.length - 1] > order) {
-      throw new Error(
-        'Selector parts should be arranged in the correct order.'
-      );
-    }
-    this.order.push(order);
-  }
-
+  // Add element selector
   element(value) {
-    if (this.elementValue) {
+    if (this.hasElement) {
       throw new Error(
-        'Element should not occur more than once inside the selector.'
+        'Element, id, and pseudo-element should not occur more than once inside the selector.'
       );
     }
-    this.checkOrder(1);
-    const newSelector = this.clone();
-    newSelector.elementValue = value;
-    return newSelector;
+    this.selector += value;
+    this.hasElement = true;
+    return this;
   }
 
+  // Add ID selector
   id(value) {
-    if (this.idValue) {
+    if (this.hasId) {
       throw new Error(
-        'Id should not occur more than once inside the selector.'
+        'Element, id, and pseudo-element should not occur more than once inside the selector.'
       );
     }
-    this.checkOrder(2);
-    const newSelector = this.clone();
-    newSelector.idValue = `#${value}`;
-    return newSelector;
+    this.selector += `#${value}`;
+    this.hasId = true;
+    return this;
   }
 
+  // Add class selector
   class(value) {
-    this.checkOrder(3);
-    const newSelector = this.clone();
-    newSelector.classValues.push(`.${value}`);
-    return newSelector;
+    this.selector += `.${value}`;
+    return this;
   }
 
+  // Add attribute selector
   attr(value) {
-    this.checkOrder(4);
-    const newSelector = this.clone();
-    newSelector.attrValues.push(`[${value}]`);
-    return newSelector;
+    this.selector += `[${value}]`;
+    return this;
   }
 
+  // Add pseudo-class selector
   pseudoClass(value) {
-    this.checkOrder(5);
-    const newSelector = this.clone();
-    newSelector.pseudoClassValues.push(`:${value}`);
-    return newSelector;
+    this.selector += `:${value}`;
+    return this;
   }
 
+  // Add pseudo-element selector
   pseudoElement(value) {
-    if (this.pseudoElementValue) {
+    if (this.hasPseudoElement) {
       throw new Error(
-        'Pseudo-element should not occur more than once inside the selector.'
+        'Element, id, and pseudo-element should not occur more than once inside the selector.'
       );
     }
-    this.checkOrder(6);
-    const newSelector = this.clone();
-    newSelector.pseudoElementValue = `::${value}`;
-    return newSelector;
+    this.selector += `::${value}`;
+    this.hasPseudoElement = true;
+    return this;
   }
 
-  clone() {
-    const newSelector = new CssSelector();
-    newSelector.elementValue = this.elementValue;
-    newSelector.idValue = this.idValue;
-    newSelector.classValues = [...this.classValues];
-    newSelector.attrValues = [...this.attrValues];
-    newSelector.pseudoClassValues = [...this.pseudoClassValues];
-    newSelector.pseudoElementValue = this.pseudoElementValue;
-    newSelector.combinedSelectors = [...this.combinedSelectors];
-    newSelector.combinator = this.combinator;
-    newSelector.order = [...this.order];
-    return newSelector;
+  // Combine selectors
+  combine(selector1, combinator, selector2) {
+    this.selector = `${selector1.stringify()} ${combinator} ${selector2.stringify()}`;
+    return this;
   }
 
+  // Convert the selector to a string
   stringify() {
-    if (this.combinedSelectors.length) {
-      return this.combinedSelectors
-        .map((sel) => sel.stringify())
-        .join(` ${this.combinator} `);
-    }
-    return `${this.elementValue}${this.idValue}${this.classValues.join('')}${this.attrValues.join('')}${this.pseudoClassValues.join('')}${this.pseudoElementValue}`;
-  }
-
-  static combine(selector1, combinator, selector2) {
-    const newSelector = new CssSelector();
-    newSelector.combinedSelectors = [selector1, selector2];
-    newSelector.combinator = combinator;
-    return newSelector;
+    return this.selector;
   }
 }
 
+// Facade for creating selectors
 const cssSelectorBuilder = {
-  element(value) {
-    return new CssSelector().element(value);
-  },
-
-  id(value) {
-    return new CssSelector().id(value);
-  },
-
-  class(value) {
-    return new CssSelector().class(value);
-  },
-
-  attr(value) {
-    return new CssSelector().attr(value);
-  },
-
-  pseudoClass(value) {
-    return new CssSelector().pseudoClass(value);
-  },
-
-  pseudoElement(value) {
-    return new CssSelector().pseudoElement(value);
-  },
-
-  combine(selector1, combinator, selector2) {
-    return CssSelector.combine(selector1, combinator, selector2);
-  },
+  element: (value) => new CssSelector().element(value),
+  id: (value) => new CssSelector().id(value),
+  class: (value) => new CssSelector().class(value),
+  attr: (value) => new CssSelector().attr(value),
+  pseudoClass: (value) => new CssSelector().pseudoClass(value),
+  pseudoElement: (value) => new CssSelector().pseudoElement(value),
+  combine: (selector1, combinator, selector2) =>
+    new CssSelector().combine(selector1, combinator, selector2),
 };
 
 module.exports = {
